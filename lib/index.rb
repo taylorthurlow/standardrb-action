@@ -1,8 +1,8 @@
 # Based almost completely on https://github.com/gimenete/rubocop-action
 
-require 'net/http'
-require 'json'
-require 'time'
+require "net/http"
+require "json"
+require "time"
 
 @GITHUB_SHA = ENV["GITHUB_SHA"]
 @GITHUB_EVENT_PATH = ENV["GITHUB_EVENT_PATH"]
@@ -18,10 +18,10 @@ require 'time'
 @check_name = "StandardRB"
 
 @headers = {
-  "Content-Type": 'application/json',
-  "Accept": 'application/vnd.github.antiope-preview+json',
-  "Authorization": "Bearer #{@GITHUB_TOKEN}",
-  "User-Agent": 'standardrb-action'
+  "Content-Type": "application/json",
+  Accept: "application/vnd.github.antiope-preview+json",
+  Authorization: "Bearer #{@GITHUB_TOKEN}",
+  "User-Agent": "standardrb-action"
 }
 
 def create_check
@@ -32,7 +32,7 @@ def create_check
     "started_at" => Time.now.iso8601
   }
 
-  http = Net::HTTP.new('api.github.com', 443)
+  http = Net::HTTP.new("api.github.com", 443)
   http.use_ssl = true
   path = "/repos/#{@owner}/#{@repo}/check-runs"
 
@@ -43,20 +43,20 @@ def create_check
   end
 
   data = JSON.parse(resp.body)
-  return data["id"]
+  data["id"]
 end
 
 def update_check(id, conclusion, output)
   body = {
     "name" => @check_name,
     "head_sha" => @GITHUB_SHA,
-    "status" => 'completed',
+    "status" => "completed",
     "completed_at" => Time.now.iso8601,
     "conclusion" => conclusion,
     "output" => output
   }
 
-  http = Net::HTTP.new('api.github.com', 443)
+  http = Net::HTTP.new("api.github.com", 443)
   http.use_ssl = true
   path = "/repos/#{@owner}/#{@repo}/check-runs/#{id}"
 
@@ -68,11 +68,11 @@ def update_check(id, conclusion, output)
 end
 
 @annotation_levels = {
-  "refactor" => 'failure',
-  "convention" => 'failure',
-  "warning" => 'warning',
-  "error" => 'failure',
-  "fatal" => 'failure'
+  "refactor" => "failure",
+  "convention" => "failure",
+  "warning" => "warning",
+  "error" => "failure",
+  "fatal" => "failure"
 }
 
 def run_standardrb
@@ -95,36 +95,36 @@ def run_standardrb
       message = offense["message"]
       location = offense["location"]
       annotation_level = @annotation_levels[severity]
-      count = count + 1
+      count += 1
 
       if annotation_level == "failure"
         conclusion = "failure"
       end
 
       annotations.push({
-                         "path" => path,
-                         "start_line" => location["start_line"],
-                         "end_line" => location["start_line"],
-                         "annotation_level": annotation_level,
-                         "message" => message
-                       })
+        "path" => path,
+        "start_line" => location["start_line"],
+        "end_line" => location["start_line"],
+        :annotation_level => annotation_level,
+        "message" => message
+      })
     end
   end
 
   output = {
-    "title": @check_name,
-    "summary": "#{count} offense(s) found",
+    :title => @check_name,
+    :summary => "#{count} offense(s) found",
     "annotations" => annotations
   }
 
-  return { "output" => output, "conclusion" => conclusion }
+  {"output" => output, "conclusion" => conclusion}
 end
 
 def run
-  id = create_check()
+  id = create_check
 
   begin
-    results = run_standardrb()
+    results = run_standardrb
     conclusion = results["conclusion"]
     output = results["output"]
 
@@ -136,4 +136,4 @@ def run
   end
 end
 
-run()
+run
