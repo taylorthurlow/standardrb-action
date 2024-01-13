@@ -2,6 +2,11 @@
 name: 'StandardRB'
 author: 'https://github.com/amoeba'
 description: 'Lint your Ruby code in parallel to your builds with StandardRB'
+inputs:
+  use-bundler:
+    description: 'Use bundler when executing StandardRB'
+    required: false
+    default: true
 outputs:
   title:
     description: 'The title of the check'
@@ -11,9 +16,33 @@ outputs:
     description: 'A reference to the code failing the check'
 env:
   'GITHUB_TOKEN': 'Automatically set by Actions'
-runs:
-  using: 'docker'
-  image: 'Dockerfile'
 branding:
   icon: 'code'
   color: 'red'
+runs:
+  using: 'composite'
+  steps:
+    - if: ${{ fromJSON(inputs.use-bundler) == true }}
+      name: "Run standardrb with bundler"
+      shell: bash {0}
+      run: |
+        bundle exec standardrb --format json > results.json
+        STANDARD_EXIT=$?
+        if [ $STANDARD_EXIT -gt 1 ]; then
+          echo "STANDARD_FAILURE=1" >> $GITHUB_ENV
+          exit $STANDARD_EXIT
+        fi
+    - if: ${{ fromJSON(inputs.use-bundler) != true }}
+      name: "Run standardrb"
+      shell: bash {0}
+      run: |
+        standardrb --format json > results.json
+        STANDARD_EXIT=$?
+        if [ $STANDARD_EXIT -gt 1 ]; then
+          echo "STANDARD_FAILURE=1" >> $GITHUB_ENV
+          exit $STANDARD_EXIT
+        fi
+    - if: ${{ env.STANDARD_FAILURE == '' }}
+      name: "Run checks"
+      run: ruby "${{ github.action_path }}/index.rb"
+      shell: bash
