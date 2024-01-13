@@ -1,5 +1,4 @@
 # Based almost completely on https://github.com/gimenete/rubocop-action
-
 require "net/http"
 require "json"
 require "time"
@@ -8,14 +7,13 @@ require "time"
 @GITHUB_EVENT_PATH = ENV["GITHUB_EVENT_PATH"]
 @GITHUB_TOKEN = ENV["GITHUB_TOKEN"]
 @GITHUB_WORKSPACE = ENV["GITHUB_WORKSPACE"]
-@PROJECT_PATH = ENV["PROJECT_PATH"].nil? ? @GITHUB_WORKSPACE : "#{@GITHUB_WORKSPACE}/#{ENV["PROJECT_PATH"]}"
 
 @event = JSON.parse(File.read(ENV["GITHUB_EVENT_PATH"]))
 @repository = @event["repository"]
 @owner = @repository["owner"]["login"]
 @repo = @repository["name"]
 
-@check_name = "StandardRB"
+@check_name = "StandardRB checks"
 
 @headers = {
   "Content-Type": "application/json",
@@ -77,14 +75,13 @@ end
 
 def run_standardrb
   annotations = []
-  errors = nil
-  Dir.chdir(@PROJECT_PATH) {
-    errors = JSON.parse(`standardrb --format json`)
-  }
+
+  errors = JSON.parse(File.read("results.json"))
+
   conclusion = "success"
   count = 0
 
-  raise "No files found to pass to standard" if errors["files"].none?
+  raise "Standard checked zero files" if errors["files"].none?
 
   errors["files"].each do |file|
     path = file["path"]
@@ -123,17 +120,16 @@ end
 def run
   id = create_check
 
-  begin
-    results = run_standardrb
-    conclusion = results["conclusion"]
-    output = results["output"]
+  results = run_standardrb
+  conclusion = results["conclusion"]
+  output = results["output"]
 
-    update_check(id, conclusion, output)
-
-    fail if conclusion == "failure"
-  rescue
-    update_check(id, "failure", nil)
-  end
+  update_check(id, conclusion, output)
 end
 
-run
+begin
+  run
+rescue => e
+  puts e.message
+  exit 1
+end
