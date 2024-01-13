@@ -30,6 +30,7 @@ jobs:
       run: |
         gem install bundler
         bundle install --jobs 4 --retry 3
+        STANDARD_VERSION="$(bundle info standard | head -n 1 | cut -d '(' -f2 | cut -d ')' -f1 | xargs)"
         bundle exec rake
   StandardRB:
     runs-on: ubuntu-latest
